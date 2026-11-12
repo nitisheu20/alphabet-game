@@ -1,0 +1,62 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Build Web App to APK
+        run: |
+          # Configure automated silent project generation for Bubblewrap
+          cat << EOF > input.json
+          {
+            "manifestUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manifest.json",
+            "name": "Alphabet Whiteboard Adventure",
+            "shortName": "ABC Game",
+            "packageId": "com.alphabet.whiteboardgame",
+            "iconUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icon-512.png",
+            "maskableIconUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/icon-512.png",
+            "splashScreenColor": "#e2e8f0",
+            "themeColor": "#334155",
+            "navigationColor": "#334155",
+            "navigationColorDark": "#334155",
+            "navigationDividerColor": "#334155",
+            "navigationDividerColorDark": "#334155",
+            "backgroundColor": "#e2e8f0",
+            "enableNotifications": false,
+            "startUrl": "./index.html",
+            "display": "standalone",
+            "orientation": "landscape",
+            "signingKey": {
+              "path": "android.keystore",
+              "alias": "android"
+            },
+            "appVersionName": "1.0",
+            "appVersionCode": 1,
+            "generator": "github-actions-bubblewrap"
+          }
+          EOF
+          
+          # Initialize and build
+          bubblewrap update --manifest=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manifest.json || true
+          bubblewrap build --manifest=input.json
+          
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-apk
+          path: '*.apk'
